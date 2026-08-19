@@ -4,6 +4,7 @@ import { formatStorageBytes } from "@/services/storage/quota";
 import { storageService } from "@/services/storage/service";
 import type { MediaAsset } from "@/media/types";
 import { readVideoFile } from "./mediabunny";
+import { prepareFileForImport } from "./native-media";
 import type { VideoFileData } from "./mediabunny";
 import { renderThumbnailDataUrl } from "./thumbnail";
 
@@ -95,13 +96,33 @@ export async function processMediaAssets({
 	const total = fileArray.length;
 	let completed = 0;
 
-	for (const file of fileArray) {
-		const fileType = getMediaTypeFromFile({ file });
+	for (const originalFile of fileArray) {
+		const fileType = getMediaTypeFromFile({ file: originalFile });
 
 		if (!fileType) {
-			toast.error(`Unsupported file type: ${file.name}`);
+			toast.error(`Unsupported file type: ${originalFile.name}`);
 			continue;
 		}
+
+		// On desktop, codecs the browser cannot decode (ProRes) are transcoded
+		// natively first. This has to happen before the storage check: the
+		// source can be many gigabytes while the converted file is a fraction
+		// of that. In the web build this returns the file untouched.
+		const file =
+			fileType === "video"
+				? await prepareFileForImport({
+						file: originalFile,
+						onConvertProgress: ({ percent }) => {
+							// Blend conversion progress into the overall bar so a
+							// single long file doesn't sit at 0% for minutes.
+							onProgress?.({
+								progress: Math.round(
+									((completed + percent / 100) / total) * 100,
+								),
+							});
+						},
+					})
+				: originalFile;
 
 		const storageCheck = await storageService.canStoreFile({
 			size: file.size,
