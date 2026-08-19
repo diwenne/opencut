@@ -74,6 +74,10 @@ export async function prepareFileForImport({
 	const toastId = `native-transcode-${file.name}`;
 	let announced = false;
 
+	// Probing has to finish before we know whether a conversion is needed, so
+	// nudge the bar off zero straight away rather than looking frozen.
+	onConvertProgress?.({ percent: 2 });
+
 	try {
 		const result = await native.prepareMedia({
 			srcPath,
@@ -108,10 +112,17 @@ export async function prepareFileForImport({
 
 		if (!result.converted || !result.path) {
 			if (announced) toast.dismiss(toastId);
+			// Nothing to convert: this file is already decodable.
+			onConvertProgress?.({ percent: 100 });
 			return file;
 		}
 
+		// A cache hit skips ffmpeg entirely, so no progress has been reported
+		// yet. Mark the phase boundary before the read, which for a large clip
+		// is itself the slow part.
+		onConvertProgress?.({ percent: announced ? 92 : 40 });
 		const buffer = await native.readFile({ filePath: result.path });
+		onConvertProgress?.({ percent: 100 });
 		const converted = new File(
 			[buffer],
 			replaceExtension({ name: file.name }),

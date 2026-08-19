@@ -3,7 +3,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const net = require("node:net");
-const { registerMediaHandlers } = require("./media-service");
+const { registerMediaHandlers, warmBinaries } = require("./media-service");
 
 // In a packaged app the Next standalone bundle lives in Resources/app-next.
 // In dev we point straight at the build output in the repo.
@@ -172,6 +172,7 @@ function createWindow(port) {
 app.whenReady().then(async () => {
 	try {
 		registerMediaHandlers();
+		warmBinaries();
 		reapStaleServer();
 		const port = await findOpenPort();
 		startServer(port);

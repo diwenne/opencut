@@ -193,6 +193,24 @@ async function prepareMedia({ srcPath, onProgress }) {
 	return { converted: true, cached: false, path: destPath, codec: info.codec, tonemapped: isHdr, hardware: usedHardware };
 }
 
+/**
+ * macOS verifies an unsigned binary the first time it is executed, and these
+ * are large: the first ffprobe call measured 8.3s cold versus 0.19s warm. That
+ * delay landed entirely before the first progress event, so an import looked
+ * frozen at 0%. Running both once at startup moves the cost to launch, where
+ * nothing is waiting on it.
+ */
+function warmBinaries() {
+	for (const name of ["ffprobe", "ffmpeg"]) {
+		try {
+			const child = spawn(binaryPath(name), ["-version"], { stdio: "ignore" });
+			child.on("error", () => {});
+		} catch {
+			// warming is best-effort; a failure here surfaces on real use
+		}
+	}
+}
+
 function registerMediaHandlers() {
 	ipcMain.handle("media:prepare", async (event, { srcPath, requestId }) => {
 		try {
@@ -219,4 +237,4 @@ function registerMediaHandlers() {
 	});
 }
 
-module.exports = { registerMediaHandlers, prepareMedia, probe, cacheDir };
+module.exports = { registerMediaHandlers, warmBinaries, prepareMedia, probe, cacheDir };

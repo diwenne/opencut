@@ -96,6 +96,17 @@ export async function processMediaAssets({
 	const total = fileArray.length;
 	let completed = 0;
 
+	// The bar previously only advanced when a whole file finished, so a single
+	// large import sat at 0% through decoding, reading and analysis. Report
+	// fractional progress within each file instead.
+	const reportFileProgress = ({ fraction }: { fraction: number }) => {
+		if (!onProgress) return;
+		const clamped = Math.min(1, Math.max(0, fraction));
+		onProgress({
+			progress: Math.round(((completed + clamped) / total) * 100),
+		});
+	};
+
 	for (const originalFile of fileArray) {
 		const fileType = getMediaTypeFromFile({ file: originalFile });
 
@@ -113,16 +124,14 @@ export async function processMediaAssets({
 				? await prepareFileForImport({
 						file: originalFile,
 						onConvertProgress: ({ percent }) => {
-							// Blend conversion progress into the overall bar so a
-							// single long file doesn't sit at 0% for minutes.
-							onProgress?.({
-								progress: Math.round(
-									((completed + percent / 100) / total) * 100,
-								),
-							});
+							// Preparation (decode check, transcode, read) is the
+							// long pole, so it owns the first 70% of this file.
+							reportFileProgress({ fraction: (percent / 100) * 0.7 });
 						},
 					})
 				: originalFile;
+
+		reportFileProgress({ fraction: 0.72 });
 
 		const storageCheck = await storageService.canStoreFile({
 			size: file.size,
@@ -184,6 +193,8 @@ export async function processMediaAssets({
 			} else if (fileType === "audio") {
 				duration = await getMediaDuration({ file });
 			}
+
+			reportFileProgress({ fraction: 0.95 });
 
 			processedAssets.push({
 				name: file.name,
