@@ -1,0 +1,61 @@
+{
+  "name": "opencut-desktop-electron",
+  "productName": "OpenCut",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenCut video editor packaged as a native macOS app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --dir",
+    "pack": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "app.opencut.desktop",
+    "productName": "OpenCut",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "media-service.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../apps/web/.next/standalone",
+        "to": "app-next"
+      },
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg",
+        "to": "bin/ffmpeg"
+      },
+      {
+        "from": "node_modules/ffprobe-static/bin/darwin/arm64/ffprobe",
+        "to": "bin/ffprobe"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0"
+  }
+}
