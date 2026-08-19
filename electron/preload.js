@@ -37,4 +37,8 @@ contextBridge.exposeInMainWorld("opencutNative", {
 	async readFile({ filePath }) {
 		return ipcRenderer.invoke("media:read", { filePath });
 	},
+
+	async releaseFile({ filePath }) {
+		return ipcRenderer.invoke("media:release", { filePath });
+	},
 });

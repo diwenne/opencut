@@ -30,6 +30,7 @@ interface OpenCutNative {
 		onProgress?: ({ percent }: { percent: number }) => void;
 	}) => Promise<PrepareResult>;
 	readFile: (args: { filePath: string }) => Promise<ArrayBuffer>;
+	releaseFile: (args: { filePath: string }) => Promise<{ ok: boolean }>;
 }
 
 declare global {
@@ -123,6 +124,11 @@ export async function prepareFileForImport({
 		onConvertProgress?.({ percent: announced ? 92 : 40 });
 		const buffer = await native.readFile({ filePath: result.path });
 		onConvertProgress?.({ percent: 100 });
+
+		// The editor is about to persist these bytes in its own storage, so
+		// keeping the cached conversion would mean two copies of the same video
+		// on disk. Drop it and keep exactly one.
+		void native.releaseFile?.({ filePath: result.path });
 		const converted = new File(
 			[buffer],
 			replaceExtension({ name: file.name }),

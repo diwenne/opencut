@@ -228,8 +228,23 @@ function registerMediaHandlers() {
 		}
 	});
 
-	// The renderer needs the bytes anyway to persist the asset in browser
-	// storage, so handing them over directly avoids a second copy on disk.
+	// Once the renderer has copied the bytes into OPFS, the cached conversion
+	// is a second copy of the same video on disk. The editor decodes from its
+	// own storage, so the cache entry is dropped and the import keeps exactly
+	// one copy. Re-importing the same source re-encodes it.
+	ipcMain.handle("media:release", async (_event, { filePath }) => {
+		try {
+			const dir = path.resolve(cacheDir());
+			const target = path.resolve(filePath);
+			// Only ever delete inside our own cache directory.
+			if (!target.startsWith(dir + path.sep)) return { ok: false, reason: "outside cache" };
+			await fsp.rm(target, { force: true });
+			return { ok: true };
+		} catch (error) {
+			return { ok: false, reason: String((error && error.message) || error) };
+		}
+	});
+
 	ipcMain.handle("media:read", async (_event, { filePath }) => {
 		const data = await fsp.readFile(filePath);
 		// Transfer as ArrayBuffer so structured clone doesn't stringify it.
