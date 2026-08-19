@@ -14,6 +14,8 @@ export interface VisualNodeParams {
 	animations?: VisualElement["animations"];
 	opacity: number;
 	blendMode?: BlendMode;
+	/** Look preset id from @/filters, applied when building the source texture. */
+	filter?: string;
 	effects?: Effect[];
 	masks?: Mask[];
 }

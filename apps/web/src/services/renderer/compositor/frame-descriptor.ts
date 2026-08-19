@@ -1,4 +1,5 @@
 import { drawCssBackground } from "@/gradients";
+import { getFilterCss } from "@/filters";
 import { getMaskDefinition } from "@/masks";
 import { incrementCounter } from "@/diagnostics/render-perf";
 import type { AnyBaseNode } from "../nodes/base-node";
@@ -240,13 +241,33 @@ async function collectVisualSourceNode({
 			: (node.resolved as ResolvedVisualSourceNodeState).sourceHeight;
 
 	const textureId = `${path}:source`;
-	textures.set(textureId, {
-		kind: "external",
-		id: textureId,
-		source,
-		width: sourceWidth,
-		height: sourceHeight,
-	});
+	const filterCss = getFilterCss({ id: node.params.filter });
+
+	if (filterCss) {
+		// Drawing through a filtered surface rather than uploading the frame
+		// directly. This runs for preview and export alike, and the renderer
+		// caches on contentHash so a held frame isn't redrawn every tick.
+		textures.set(textureId, {
+			kind: "rendered",
+			id: textureId,
+			contentHash: `filter:${node.params.filter}:${identityKey(source)}:${sourceWidth}x${sourceHeight}`,
+			width: sourceWidth,
+			height: sourceHeight,
+			draw: (ctx) => {
+				ctx.filter = filterCss;
+				ctx.drawImage(source, 0, 0, sourceWidth, sourceHeight);
+				ctx.filter = "none";
+			},
+		});
+	} else {
+		textures.set(textureId, {
+			kind: "external",
+			id: textureId,
+			source,
+			width: sourceWidth,
+			height: sourceHeight,
+		});
+	}
 
 	const transform = computeVisualTransform({
 		renderer,

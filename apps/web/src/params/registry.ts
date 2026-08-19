@@ -4,6 +4,7 @@ import type {
 	ParamValues,
 } from "@/params";
 import { MIN_TRANSFORM_SCALE } from "@/animation/transform";
+import { DEFAULT_FILTER_ID, FILTER_OPTIONS } from "@/filters";
 import type { BlendMode } from "@/rendering";
 import type {
 	ElementType,
@@ -151,6 +152,14 @@ const visualElementParams: ElementParamDefinition[] = [
 		default: DEFAULTS.element.blendMode,
 		keyframable: false,
 		options: BLEND_MODE_OPTIONS,
+	},
+	{
+		key: "filter",
+		label: "Filter",
+		type: "select",
+		default: DEFAULT_FILTER_ID,
+		keyframable: false,
+		options: FILTER_OPTIONS,
 	},
 ];
 

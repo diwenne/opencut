@@ -12,6 +12,7 @@ import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { AnyBaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/project/types";
 import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/background/blur";
+import { readFilterFromParams } from "@/filters";
 import {
 	buildTransformFromParams,
 	readBlendModeFromParams,
@@ -80,6 +81,7 @@ function buildTrackNodes({
 							animations: element.animations,
 							opacity: readOpacityFromParams({ params: element.params }),
 							blendMode: readBlendModeFromParams({ params: element.params }),
+						filter: readFilterFromParams({ params: element.params }),
 							effects: element.effects ?? [],
 							masks: element.masks ?? [],
 						}),
@@ -97,6 +99,7 @@ function buildTrackNodes({
 							animations: element.animations,
 							opacity: readOpacityFromParams({ params: element.params }),
 							blendMode: readBlendModeFromParams({ params: element.params }),
+						filter: readFilterFromParams({ params: element.params }),
 							effects: element.effects ?? [],
 							masks: element.masks ?? [],
 							...(isPreview && {
@@ -136,6 +139,7 @@ function buildTrackNodes({
 						animations: element.animations,
 						opacity: readOpacityFromParams({ params: element.params }),
 						blendMode: readBlendModeFromParams({ params: element.params }),
+						filter: readFilterFromParams({ params: element.params }),
 						effects: element.effects ?? [],
 					}),
 				);
@@ -154,6 +158,7 @@ function buildTrackNodes({
 						animations: element.animations,
 						opacity: readOpacityFromParams({ params: element.params }),
 						blendMode: readBlendModeFromParams({ params: element.params }),
+						filter: readFilterFromParams({ params: element.params }),
 						effects: element.effects ?? [],
 						masks: element.masks ?? [],
 					}),

@@ -37,7 +37,7 @@ const TRANSFORM_PARAM_KEYS = [
 	"transform.rotate",
 ] as const;
 
-const BLENDING_PARAM_KEYS = ["opacity", "blendMode"] as const;
+const BLENDING_PARAM_KEYS = ["opacity", "blendMode", "filter"] as const;
 const AUDIO_PARAM_KEYS = ["volume", "muted"] as const;
 const TEXT_PARAM_KEYS = [
 	"content",
