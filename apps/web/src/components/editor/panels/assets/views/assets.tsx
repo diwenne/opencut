@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PanelView } from "@/components/editor/panels/assets/views/base-panel";
 import { MediaDragOverlay } from "@/components/editor/panels/assets/drag-overlay";
 import { DraggableItem } from "@/components/editor/panels/assets/draggable-item";
@@ -122,6 +122,17 @@ export function MediaView() {
 			onFilesSelected: (files) => processFiles({ files }),
 		});
 
+	const removeAssets = useCallback(
+		({ ids }: { ids: string[] }) => {
+			if (ids.length === 0) return;
+			invokeAction("remove-media-assets", {
+				projectId: activeProject.metadata.id,
+				assetIds: ids,
+			});
+		},
+		[activeProject.metadata.id],
+	);
+
 	const handleRemove = ({
 		event,
 		ids,
@@ -130,11 +141,7 @@ export function MediaView() {
 		ids: string[];
 	}) => {
 		event.stopPropagation();
-
-		invokeAction("remove-media-assets", {
-			projectId: activeProject.metadata.id,
-			assetIds: ids,
-		});
+		removeAssets({ ids });
 	};
 
 	const handleSort = ({ key }: { key: MediaSortKey }) => {
@@ -223,6 +230,7 @@ export function MediaView() {
 						onRevealComplete={clearHighlight}
 					>
 						<MediaScopeRegistrar />
+						<MediaDeleteShortcut onDelete={removeAssets} />
 						<MediaItemList
 							items={filteredMediaItems}
 							mode={mediaViewMode}
@@ -233,6 +241,51 @@ export function MediaView() {
 			</PanelView>
 		</>
 	);
+}
+
+/**
+ * Deletes the selected assets when Delete/Backspace is pressed while the assets
+ * panel has focus.
+ *
+ * Assets have their own selection system, separate from editor.selection, so
+ * the global "delete-selected" binding does not cover them. This listens on
+ * window in the capture phase, which runs before the document-level keybinding
+ * handler, and stops propagation so a timeline element is not deleted too.
+ */
+function MediaDeleteShortcut({
+	onDelete,
+}: {
+	onDelete: ({ ids }: { ids: string[] }) => void;
+}) {
+	const { selectedIds } = useSelection();
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== "Delete" && event.key !== "Backspace") return;
+			if (selectedIds.length === 0) return;
+
+			const active = document.activeElement;
+			if (!(active instanceof HTMLElement)) return;
+			// Never hijack a keystroke meant for the search box or a rename field.
+			if (
+				active.tagName === "INPUT" ||
+				active.tagName === "TEXTAREA" ||
+				active.isContentEditable
+			) {
+				return;
+			}
+			if (!active.closest('[aria-label="Assets"]')) return;
+
+			event.preventDefault();
+			event.stopPropagation();
+			onDelete({ ids: [...selectedIds] });
+		};
+
+		window.addEventListener("keydown", handleKeyDown, true);
+		return () => window.removeEventListener("keydown", handleKeyDown, true);
+	}, [selectedIds, onDelete]);
+
+	return null;
 }
 
 function MediaScopeRegistrar() {

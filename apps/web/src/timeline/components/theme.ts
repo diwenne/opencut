@@ -1,6 +1,20 @@
 import type { TrackType } from "@/timeline";
 
+// White reads well on the audio track's purple element, but video elements are
+// transparent and fall back to this default, where white is invisible against a
+// light timeline. Resolved per theme instead of hardcoded.
 export const TIMELINE_AUDIO_WAVEFORM_COLOR = "rgba(255, 255, 255, 0.7)";
+export const TIMELINE_AUDIO_WAVEFORM_COLOR_LIGHT = "rgba(24, 24, 27, 0.55)";
+
+export function getDefaultWaveformColor({
+	isDark,
+}: {
+	isDark: boolean;
+}): string {
+	return isDark
+		? TIMELINE_AUDIO_WAVEFORM_COLOR
+		: TIMELINE_AUDIO_WAVEFORM_COLOR_LIGHT;
+}
 
 export const TIMELINE_TRACK_THEME: Record<
 	TrackType,

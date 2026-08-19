@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
-import { TIMELINE_AUDIO_WAVEFORM_COLOR } from "./theme";
+import { getDefaultWaveformColor } from "./theme";
 import {
 	buildWaveformSampleBuckets,
 	sampleSourceWaveformSummary,
@@ -66,10 +67,16 @@ export function AudioWaveform({
 	clipDurationSec,
 	retime,
 	sourceStartSec,
-	color = TIMELINE_AUDIO_WAVEFORM_COLOR,
+	color,
 	burnColor = WAVEFORM_BURN_COLOR,
 	className = "",
 }: AudioWaveformProps) {
+	// next-themes resolves "system" for us; re-resolving here means the waveform
+	// repaints when the theme flips rather than staying an invisible white.
+	const { resolvedTheme } = useTheme();
+	const resolvedColor =
+		color ?? getDefaultWaveformColor({ isDark: resolvedTheme !== "light" });
+
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const summaryRef = useRef<SourceWaveformSummary | null>(null);
@@ -79,7 +86,7 @@ export function AudioWaveform({
 		clipDurationSec,
 		retime,
 		sourceStartSec,
-		color,
+		color: resolvedColor,
 		burnColor,
 	});
 	const scrollParentRef = useRef<HTMLElement | null>(null);
@@ -310,7 +317,7 @@ export function AudioWaveform({
 		clipDurationSec,
 		retime,
 		sourceStartSec,
-		color,
+		resolvedColor,
 		burnColor,
 	]);
 
