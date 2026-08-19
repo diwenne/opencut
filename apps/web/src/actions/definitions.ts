@@ -162,7 +162,8 @@ const ACTION_DEFAULT_SHORTCUTS = [
 	["jump-backward", ["shift+left"]],
 	["goto-start", ["home", "enter"]],
 	["goto-end", ["end"]],
-	["split", ["s"]],
+	// "ctrl" resolves to Command on macOS (see keybindings-store), so this is Cmd+B.
+	["split", ["s", "ctrl+b"]],
 	["split-left", ["q"]],
 	["split-right", ["w"]],
 	["delete-selected", ["backspace", "delete"]],

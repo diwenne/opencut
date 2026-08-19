@@ -46,6 +46,33 @@ export const getNativeBridge = (): OpenCutNative | null => {
 
 export const isNativeMediaAvailable = (): boolean => getNativeBridge() !== null;
 
+/**
+ * Maps a converted File to the cached conversion it came from, so the cache
+ * entry can be dropped once the editor has stored the bytes itself. Weak so a
+ * discarded import cannot pin entries in memory.
+ */
+const cachePathByFile = new WeakMap<File, string>();
+
+/**
+ * Drops the cached conversion backing this file, if any. Safe to call for any
+ * file: originals and web builds are simply ignored.
+ */
+export async function releaseCachedSource({
+	file,
+}: {
+	file: File;
+}): Promise<void> {
+	const native = getNativeBridge();
+	const cachePath = cachePathByFile.get(file);
+	if (!native?.releaseFile || !cachePath) return;
+	cachePathByFile.delete(file);
+	try {
+		await native.releaseFile({ filePath: cachePath });
+	} catch {
+		// a stale cache entry is harmless; it is re-derivable
+	}
+}
+
 const replaceExtension = ({ name }: { name: string }): string => {
 	const dot = name.lastIndexOf(".");
 	return `${dot === -1 ? name : name.slice(0, dot)}.mp4`;
@@ -124,16 +151,17 @@ export async function prepareFileForImport({
 		onConvertProgress?.({ percent: announced ? 92 : 40 });
 		const buffer = await native.readFile({ filePath: result.path });
 		onConvertProgress?.({ percent: 100 });
-
-		// The editor is about to persist these bytes in its own storage, so
-		// keeping the cached conversion would mean two copies of the same video
-		// on disk. Drop it and keep exactly one.
-		void native.releaseFile?.({ filePath: result.path });
 		const converted = new File(
 			[buffer],
 			replaceExtension({ name: file.name }),
 			{ type: "video/mp4" },
 		);
+
+		// Remember where this file's conversion is cached. Releasing it here
+		// would be too early: if the import is interrupted before the editor
+		// persists the bytes, the conversion is lost and has to be redone.
+		// storage/service.ts releases it once the asset is safely stored.
+		cachePathByFile.set(converted, result.path);
 
 		if (announced || result.cached) {
 			toast.success(`Converted ${file.name}`, {

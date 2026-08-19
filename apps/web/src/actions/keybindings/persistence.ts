@@ -1,6 +1,7 @@
 import type { ShortcutKey } from "@/actions/keybinding";
 import { isShortcutKey } from "@/actions/keybinding";
 import type { TActionWithOptionalArgs } from "@/actions";
+import { getDefaultShortcuts } from "@/actions/definitions";
 import { isActionWithOptionalArgs } from "@/actions";
 import { runMigrations } from "./migrations";
 import {
@@ -72,6 +73,16 @@ export function decodePersistedKeybindingsState({
 			"[keybindings] Dropped invalid persisted entries:",
 			dropped,
 		);
+	}
+
+	// A user who never rebound anything should track the app's defaults, not a
+	// snapshot of whatever shipped the first time they opened the editor.
+	// Without this, shortcuts added in later versions never reach them.
+	if (!persisted.isCustomized) {
+		return {
+			keybindings: getDefaultShortcuts(),
+			isCustomized: false,
+		};
 	}
 
 	return {

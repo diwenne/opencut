@@ -1,4 +1,5 @@
 import type { TProject, TProjectMetadata } from "@/project/types";
+import { releaseCachedSource } from "@/media/native-media";
 import { getProjectDurationFromScenes } from "@/timeline/scenes";
 import type { MediaAsset } from "@/media/types";
 import { IndexedDBAdapter } from "./indexeddb-adapter";
@@ -316,6 +317,10 @@ class StorageService {
 				key: mediaAsset.id,
 				value: metadata,
 			});
+
+			// The bytes are now in the editor's own storage, so any cached
+			// native conversion of this file is a redundant second copy.
+			void releaseCachedSource({ file: mediaAsset.file });
 		} catch (error) {
 			try {
 				await mediaAssetsAdapter.remove(mediaAsset.id);
