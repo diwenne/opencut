@@ -62,6 +62,27 @@ function reapStaleServer() {
 	clearPidFile();
 }
 
+// IndexedDB and OPFS are scoped by origin, and the origin includes the port.
+// A random port per launch therefore handed every launch an empty profile and
+// stranded the previous one's projects and media on an origin nothing would
+// ever load again. The port has to be stable for storage to persist.
+// This specific value is deliberate. Earlier builds picked a random port, so
+// each launch created a fresh origin; the projects and media from the launch
+// that used port 54805 live under that origin. Pinning to it recovers them
+// instead of stranding them. Changing this number orphans user data.
+const APP_PORT = 54805;
+
+function isPortFree(port) {
+	return new Promise((resolve) => {
+		const probe = net.createServer();
+		probe.unref();
+		probe.once("error", () => resolve(false));
+		probe.listen(port, "127.0.0.1", () => {
+			probe.close(() => resolve(true));
+		});
+	});
+}
+
 function findOpenPort() {
 	return new Promise((resolve, reject) => {
 		const probe = net.createServer();
@@ -72,6 +93,18 @@ function findOpenPort() {
 			probe.close(() => resolve(port));
 		});
 	});
+}
+
+async function resolvePort() {
+	if (await isPortFree(APP_PORT)) return { port: APP_PORT, stable: true };
+
+	// A server we reaped a moment ago may not have released the socket yet.
+	for (let attempt = 0; attempt < 10; attempt++) {
+		await new Promise((r) => setTimeout(r, 300));
+		if (await isPortFree(APP_PORT)) return { port: APP_PORT, stable: true };
+	}
+
+	return { port: await findOpenPort(), stable: false };
 }
 
 function waitForServer({ port, timeoutMs = 30000 }) {
@@ -174,7 +207,18 @@ app.whenReady().then(async () => {
 		registerMediaHandlers();
 		warmBinaries();
 		reapStaleServer();
-		const port = await findOpenPort();
+		const { port, stable } = await resolvePort();
+		if (!stable) {
+			// Storage lives on the origin, so a different port means the user
+			// sees an empty project list. Say so rather than looking like data
+			// loss.
+			dialog.showErrorBox(
+				"OpenCut: port in use",
+				`Port ${APP_PORT} is being used by another program, so OpenCut started on port ${port} instead.\n\n` +
+					"Projects and media are stored per port, so this session will show an empty project list. " +
+					`Quit whatever is using port ${APP_PORT} and restart OpenCut to get your projects back.`,
+			);
+		}
 		startServer(port);
 		await waitForServer({ port });
 		createWindow(port);
